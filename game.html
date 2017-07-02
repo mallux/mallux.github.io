@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #f1f1f1;
+}
+</style>
+</head>
+<body onload="startGame()">
+<script>
+
+/*
+Data elements:
+- score (per game)
+- high score (across all games)
+- current round (x out of 20)
+- total rounds (15 out of x)
+- product (e.g. 56)
+- factor (e.g. 4x3)
+- list of candidate factors
+- list actual factors
+- time
+*/
+    
+    var score;
+    var highScore;
+    var round;
+    var maxRound;
+    var product;
+    var candidateFactors = [];
+    var realFactors = [];
+    var endTime;
+    var timeRemaining;
+    var difficulty = 20;
+    var candidates = 6;
+    var productComponent;
+    var scoreComponent;
+    var found;
+    var snd = new Audio("trombone.wav"); 
+    var smashing = new Audio("smashing.wav");
+    var nope = new Audio("nope.wav");
+    var jurassic = new Audio("https://www.televisiontunes.com/song/download/4498");
+    var playing = false;
+    
+    function startGame() {
+        playing=true;
+        if (!scoreComponent) {
+            scoreComponent = new ScoreComponent();
+        } 
+        
+        timeRemaining = new timeRemainingComponent();
+        found = 0;
+
+        product = Math.floor(Math.random() * 100) + 1;
+        productComponent = new ProductComponent(product);
+        
+        realFactors = productComponent.getRealFactors();
+        console.log(realFactors);
+        
+        var numFakes = 6 - realFactors.length;
+        
+        var reali = 0;
+        for (var i=0; i<candidates; i++) {
+            delete candidateFactors[i];
+            if (reali < realFactors.length) {
+                // this is a real one
+                candidateFactors[i] = new candidateFactorComponent(realFactors[reali].i, realFactors[reali].j , true);
+            } else {
+                var fake = makeFake();
+                while (fake[0] * fake[1] === product) {
+                    fake = makeFake();
+                }
+                candidateFactors[i] = new candidateFactorComponent(fake[0], fake[1], false);
+            }
+            reali++;
+        }
+        
+        gameArea.start();
+    }
+
+    var makeFake = function() {
+        // pick a random real factor
+        var fid = Math.floor(Math.random() * realFactors.length);
+        var fake = [];
+        // random x+-
+        fakeX = realFactors[fid].i + Math.floor(Math.random() * 6) - 3;
+        if (fakeX < 1) {
+            fakeX = 1;
+        }
+        fake.push(fakeX);
+        
+        // random y +-
+        fakeY = realFactors[fid].j + Math.floor(Math.random() * 6) - 3;
+        if (fakeY < 1) {
+            fakeY = 1;
+        }
+        fake.push(fakeY);
+        return fake;
+    }
+    
+    var gameArea = {
+        canvas : document.createElement("canvas"),
+        start : function() {
+            this.canvas.width = 800;
+            this.canvas.height = 600;
+            this.context = this.canvas.getContext("2d");
+            
+            console.log(this.canvas)
+            /*var canvasPosition = {
+                x: this.canvas.offset().left,
+                y: this.canvas.offset().top
+            };*/
+                
+            var rect = this.canvas.getBoundingClientRect();
+            
+            this.canvas.addEventListener('click', function(e) {
+                e.preventDefault();
+     
+                var mouse = {
+                    x: e.pageX - rect.left,
+                    y: e.pageY - rect.top
+                }
+     
+                for (var i=0; i < candidateFactors.length; i++) {
+                    candidateFactors[i].handleClick(mouse);
+                }
+     
+                return false;
+            });
+            
+            timeRemaining.reset();
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.interval = setInterval(updateGameArea, 100);
+        },
+        clear : function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }
+    
+    function timeRemainingComponent() {
+        this.endTime;
+        this.remaining;
+        
+        this.reset = function() {
+            this.endTime = Date.now() + (difficulty * 1000);
+        }
+        
+        this.update = function() {
+            this.remaining = this.endTime - Date.now();
+            if (this.remaining < 0) {
+                this.remaining = 0;
+            }
+            
+            ctx = gameArea.context;
+            ctx.font = "30px Comic Sans MS";
+            ctx.fillStyle = "blue";
+            ctx.fillText(this.remaining, 600, 50);
+        }
+        
+    }
+    
+    function ProductComponent(product) {
+        this.x = 350;
+        this.y = 200;
+        this.update = function() {
+            ctx.font = "30px Sans";
+            ctx.fillStyle = "purple";
+            ctx.fillText(product, this.x, this.y);
+        }
+        
+        this.getRealFactors = function() {
+            var factors=[];
+            for (var i=1; i<101; i++) {
+                for (var j=1; j<101; j++) {
+                    if (i*j === product) {
+                        var found=false;
+                        for (var f=0; f < factors.length; f++) {
+                            var newfactor = {i,j};
+                            if (factors[f].i === newfactor.j && factors[f].j === newfactor.i) {
+                                found=true;  
+                                break;                              
+                            }
+                        }
+                        if (found==false) {
+                            factors.push({i,j});
+                        }
+                    }
+                }
+            }
+            return factors;
+        }
+    }
+    
+    function ScoreComponent() {
+        this.score =0;
+        this.x = 600;
+        this.y = 600;
+        this.update = function() {
+            ctx.font = "30px Sans";
+            ctx.fillStyle = "green";
+            ctx.fillText("Score:"+this.score, this.x, this.y);
+        }
+        this.increment = function() {
+            this.score++;
+        }
+        this.decrement = function() {
+            // this.score--;
+        }
+        this.getScore = function() {
+            return this.score;
+        }
+    }
+    
+    function candidateFactorComponent(factor1, factor2, real) {
+        this.x = Math.floor(Math.random() * 600) + 50;
+        this.y = Math.floor(Math.random() * 400) + 50;
+        this.factor1 = factor1;
+        this.factor2 = factor2;
+        
+        this.update = function() {
+            ctx.font = "14px Comic Sans";
+            ctx.fillStyle = "black";
+            ctx.fillText(this.factor1 + " . " + this.factor2, this.x, this.y)
+        }
+        
+        this.handleClick = function(mouse) {
+            if (mouse.x > (this.x-10) && mouse.x < this.x + 60 && mouse.y > (this.y-10) && mouse.y < this.y + 30) {
+                if (real) {
+                    console.log("hit", mouse.x, mouse.y);
+                    this.y = 20;
+                    found++;
+                    smashing.play();
+                } else {
+                    nope.play();
+                    scoreComponent.decrement();
+                }
+            } else {
+                console.log("miss", mouse.x, mouse.y);
+            }
+        }
+    }
+        
+    function updateGameArea() {
+        if (!playing) {
+            return;
+        }
+        gameArea.clear();
+        if (found >= realFactors.length) {
+            console.log("found!");
+            this.interval = clearInterval();
+            this.scoreComponent.increment();
+            this.startGame();
+        } else {
+            timeRemaining.update();
+        }
+        scoreComponent.update();
+        productComponent.update();
+        scoreComponent.update();
+        for (var i=0; i<candidates; i++) {
+            candidateFactors[i].update();
+        }
+        if (timeRemaining.remaining === 0) {
+            ctx = gameArea.context;
+            ctx.font = "30px Consolas";
+            ctx.fillStyle = "red";
+            ctx.fillText("Too late!", 310, 100);
+            if (playing) {
+                playing = false;
+                snd.play();
+            }
+        }
+        if (playing && scoreComponent.getScore() >= 10) {
+            playing = false;
+            jurassic.currentTime = 6;
+            jurassic.play();
+        }
+
+    }
+
+</script>
+<br>
+<button onclick="startGame()" name="Reset">RESET</button>
+
+</body>
+</html>
