@@ -3,9 +3,13 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <style>
+* {
+    margin: 0;
+    padding: 0;
+}
 canvas {
-    border:1px solid #d3d3d3;
-    background-color: #f1f1f1;
+    border: 0;
+    background-color: #d0d0ff;
 }
 </style>
 </head>
@@ -104,8 +108,8 @@ Data elements:
     var gameArea = {
         canvas : document.createElement("canvas"),
         start : function() {
-            this.canvas.width = 800;
-            this.canvas.height = 600;
+            this.canvas.width = 600;
+            this.canvas.height = 700;
             this.context = this.canvas.getContext("2d");
             
             console.log(this.canvas)
@@ -157,7 +161,7 @@ Data elements:
             ctx = gameArea.context;
             ctx.font = "30px Comic Sans MS";
             ctx.fillStyle = "blue";
-            ctx.fillText(this.remaining, 600, 50);
+            ctx.fillText(this.remaining, 400, 50);
         }
         
     }
@@ -196,7 +200,7 @@ Data elements:
     
     function ScoreComponent() {
         this.score =0;
-        this.x = 600;
+        this.x = 400;
         this.y = 600;
         this.update = function() {
             ctx.font = "30px Sans";
